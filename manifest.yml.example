@@ -1,0 +1,10 @@
+---
+applications:
+  - name: concourse-tracker-bot
+    health-check-type: none
+    env:
+      GOPACKAGENAME: concourse-tracker-bot
+      GO15VENDOREXPERIMENT: 1
+      CONCOURSE_HOST: # https://runtime.ci.cf-app.com
+      CONCOURSE_TEAM: # main
+      TRACKER_API_TOKEN: # https://www.pivotaltracker.com/help/articles/api_token/
