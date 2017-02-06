@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,29 +12,23 @@ type Client struct {
 	TrackerAPI string
 	APIToken   string
 }
+
 type Story struct {
-	CreatedAt     string  `json:"created_at"`
-	UpdatedAt     string  `json:"updated_at"`
-	CurrentState  string  `json:"current_state"`
-	Description   string  `json:"description"`
-	Estimate      int     `json:"estimate"`
-	ID            int     `json:"id"`
-	Kind          string  `json:"kind"`
-	Labels        []Label `json:"labels"`
-	Name          string  `json:"name"`
-	OwnerIDs      []int   `json:"owner_ids"`
-	ProjectID     int     `json:"project_id"`
-	RequestedByID int     `json:"requested_by_id"`
-	StoryType     string  `json:"story_type"`
-	URL           string  `json:"url"`
+	Name         string    `json:"name"`
+	ID           int       `json:"id,omitempty"`
+	CurrentState string    `json:"current_state,omitempty"`
+	Labels       []Label   `json:"labels,omitempty"`
+	StoryType    string    `json:"story_type,omitempty"`
+	BeforeID     int       `json:"before_id,omitempty"`
+	Comments     []Comment `json:"comments,omitempty"`
 }
+
+type Comment struct {
+	Text string `json:"text"`
+}
+
 type Label struct {
-	ID        int    `json:"id"`
-	ProjectID int    `json:"project_id"`
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	Name string `json:"name"`
 }
 
 func (c Client) doRequest(req *http.Request) (*http.Response, error) {
@@ -69,4 +64,35 @@ func (c Client) Stories(projectID int, filter string) ([]Story, error) {
 	}
 
 	return stories, nil
+}
+
+func (c Client) CreateStory(projectID int, input Story) (Story, error) {
+	body := &bytes.Buffer{}
+	if err := json.NewEncoder(body).Encode(input); err != nil {
+		return Story{}, err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/projects/%d/stories", c.TrackerAPI, projectID), body)
+	if err != nil {
+		return Story{}, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(req)
+	if err != nil {
+		return Story{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return Story{}, fmt.Errorf("%s - %s", resp.Status, string(body))
+	}
+
+	var story Story
+	if err := json.NewDecoder(resp.Body).Decode(&story); err != nil {
+		return Story{}, err
+	}
+
+	return story, nil
 }
