@@ -10,11 +10,8 @@ import (
 	"time"
 
 	"github.com/salsita/go-pivotaltracker/v5/pivotal"
+	"github.com/zankich/concourse-tracker-bot/concourse"
 )
-
-type Job struct {
-	FinishedBuild Build `json:"finished_build"`
-}
 
 type Build struct {
 	Status       string `json:"status"`
@@ -23,45 +20,8 @@ type Build struct {
 	PipelineName string `json:"pipeline_name"`
 }
 
-type Pipeline struct {
-	Name   string  `json:"name"`
-	URL    string  `json:"url"`
-	Paused bool    `json:"paused"`
-	Groups []Group `json:"groups"`
-}
-
-type Group struct {
-	Name string   `json:"name"`
-	Jobs []string `json:"jobs"`
-}
-
-func GetJobURLs(host string, team string) ([]string, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1/teams/%s/pipelines", host, team))
-	if err != nil {
-		return []string{}, err
-	}
-
-	var pipelines []Pipeline
-	if err := json.NewDecoder(resp.Body).Decode(&pipelines); err != nil {
-		return []string{}, err
-	}
-
-	urls := []string{}
-	for _, pipeline := range pipelines {
-		if pipeline.Paused {
-			continue
-		}
-
-		for _, group := range pipeline.Groups {
-			for _, job := range group.Jobs {
-				urls = append(urls,
-					fmt.Sprintf("%s/api/v1/teams/%s/pipelines/%s/jobs/%s", host, team, pipeline.Name, job),
-				)
-			}
-		}
-	}
-
-	return urls, nil
+type Job struct {
+	FinishedBuild Build `json:"finished_build"`
 }
 
 func main() {
@@ -76,7 +36,7 @@ func main() {
 
 	for {
 		log.Println("retrieving jobs...")
-		urls, err := GetJobURLs(host, team)
+		urls, err := concourse.GetJobURLs(host, team)
 		if err != nil {
 			log.Println(err)
 		}
