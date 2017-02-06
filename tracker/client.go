@@ -96,3 +96,29 @@ func (c Client) CreateStory(projectID int, input Story) (Story, error) {
 
 	return story, nil
 }
+
+func (c Client) AddComment(projectID int, storyID int, comment string) error {
+	body := &bytes.Buffer{}
+	if err := json.NewEncoder(body).Encode(Comment{Text: comment}); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/projects/%d/stories/%d/comments", c.TrackerAPI, projectID, storyID), body)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("%s - %s", resp.Status, string(body))
+	}
+
+	return nil
+}

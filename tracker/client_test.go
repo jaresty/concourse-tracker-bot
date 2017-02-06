@@ -323,4 +323,97 @@ var _ = Describe("Client", func() {
 			})
 		})
 	})
+
+	Describe("AddComment", func() {
+		var (
+			ts     *httptest.Server
+			client tracker.Client
+		)
+
+		BeforeEach(func() {
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TrackerToken") != "my-tracker-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+				}
+
+				if r.Header.Get("Content-Type") != "application/json" {
+					w.WriteHeader(http.StatusNoContent)
+				}
+
+				if r.Method == "POST" && r.URL.Path == "/projects/99/stories/101/comments" {
+					body, err := ioutil.ReadAll(r.Body)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						w.Write([]byte(err.Error()))
+					}
+
+					commentJSON := []byte(`{"text":"my comment"}`)
+
+					var got interface{}
+					if err := json.Unmarshal(body, &got); err != nil {
+						panic(err)
+					}
+
+					var want interface{}
+					if err := json.Unmarshal(commentJSON, &want); err != nil {
+						panic(err)
+					}
+
+					if reflect.DeepEqual(got, want) {
+						w.Write(commentJSON)
+						return
+					}
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(fmt.Sprintf("got %s - want %s", string(body), string(commentJSON))))
+					return
+				}
+
+				w.WriteHeader(http.StatusTeapot)
+			}))
+
+			client = tracker.Client{
+				APIToken:   "my-tracker-token",
+				TrackerAPI: ts.URL,
+			}
+		})
+
+		It("adds a comment to an existing story", func() {
+			err := client.AddComment(99, 101, "my comment")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("failure cases", func() {
+			It("returns an error when the return code is not a 200", func() {
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("something bad happened"))
+				}))
+
+				client := tracker.Client{
+					TrackerAPI: ts.URL,
+				}
+
+				err := client.AddComment(99, 101, "")
+				Expect(err).To(MatchError("418 I'm a teapot - something bad happened"))
+			})
+
+			It("returns an error when the request fails", func() {
+				client := tracker.Client{
+					TrackerAPI: "http://fakehost.fake",
+				}
+
+				err := client.AddComment(99, 101, "")
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+			})
+
+			It("returns an error when url is malformed", func() {
+				client := tracker.Client{
+					TrackerAPI: "%%",
+				}
+
+				err := client.AddComment(99, 101, "")
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+			})
+		})
+	})
 })
