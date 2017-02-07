@@ -15,6 +15,17 @@ import (
 )
 
 const (
+	listCommentsResponse = `[
+  {
+	  "text": "comment 1"
+  },
+  {
+	  "text": "comment 2"
+  },
+  {
+	  "text": "comment 3"
+  }
+]`
 	createStoryRequest = `{
 	"name": "my story",
 	"story_type": "chore",
@@ -413,6 +424,97 @@ var _ = Describe("Client", func() {
 
 				err := client.AddComment(99, 101, "")
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+			})
+		})
+	})
+
+	Describe("ListComments", func() {
+		var (
+			ts     *httptest.Server
+			client tracker.Client
+		)
+
+		BeforeEach(func() {
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TrackerToken") != "my-tracker-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+				}
+
+				if r.Method == "GET" && r.URL.Path == "/projects/99/stories/101/comments" {
+					w.Write([]byte(listCommentsResponse))
+					return
+				}
+
+				w.WriteHeader(http.StatusTeapot)
+			}))
+
+			client = tracker.Client{
+				APIToken:   "my-tracker-token",
+				TrackerAPI: ts.URL,
+			}
+		})
+
+		It("returns the list of comments for the given story", func() {
+			comments, err := client.ListComments(99, 101)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(comments).To(Equal([]tracker.Comment{
+				{
+					Text: "comment 1",
+				},
+				{
+					Text: "comment 2",
+				},
+				{
+					Text: "comment 3",
+				},
+			}))
+		})
+
+		Context("failure cases", func() {
+			It("returns an error on a non 200 status code", func() {
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("something bad happened"))
+				}))
+
+				client := tracker.Client{
+					TrackerAPI: ts.URL,
+				}
+
+				_, err := client.ListComments(99, 101)
+				Expect(err).To(MatchError("418 I'm a teapot - something bad happened"))
+			})
+
+			It("returns an error when url is malformed", func() {
+				client := tracker.Client{
+					TrackerAPI: "%%",
+				}
+
+				_, err := client.ListComments(99, 101)
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+			})
+
+			It("returns an error when request fails", func() {
+				client := tracker.Client{
+					TrackerAPI: "http://fakehost.fake",
+				}
+
+				_, err := client.ListComments(99, 101)
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+			})
+
+			It("returns an error when the json is malformed", func() {
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Write([]byte("%%"))
+				}))
+
+				client := tracker.Client{
+					TrackerAPI: ts.URL,
+				}
+
+				_, err := client.ListComments(99, 101)
+				Expect(err).To(MatchError("invalid character '%' looking for beginning of value"))
 			})
 		})
 	})

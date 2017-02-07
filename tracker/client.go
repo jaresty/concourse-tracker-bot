@@ -122,3 +122,27 @@ func (c Client) AddComment(projectID int, storyID int, comment string) error {
 
 	return nil
 }
+
+func (c Client) ListComments(projectID int, storyID int) ([]Comment, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/projects/%d/stories/%d/comments", c.TrackerAPI, projectID, storyID), nil)
+	if err != nil {
+		return []Comment{}, err
+	}
+
+	resp, err := c.doRequest(req)
+	if err != nil {
+		return []Comment{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return []Comment{}, fmt.Errorf("%s - %s", resp.Status, string(body))
+	}
+
+	var comments []Comment
+	if err := json.NewDecoder(resp.Body).Decode(&comments); err != nil {
+		return []Comment{}, err
+	}
+
+	return comments, nil
+}
