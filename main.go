@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/salsita/go-pivotaltracker/v5/pivotal"
 	"github.com/zankich/concourse-tracker-bot/concourse"
+	"github.com/zankich/concourse-tracker-bot/tracker"
 )
 
 type Build struct {
@@ -32,7 +32,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	trackerClient := pivotal.NewClient(trackerToken)
+
+	client := tracker.Client{
+		APIToken:   trackerToken,
+		TrackerAPI: "https://www.pivotaltracker.com/services/v5",
+	}
 
 	for {
 		log.Println("retrieving jobs...")
@@ -60,7 +64,7 @@ func main() {
 
 			if job.FinishedBuild.Status == "failed" {
 				log.Println("build status failed")
-				stories, err := trackerClient.Stories.List(trackerProjectID, `-state:accepted label:"broken build"`)
+				stories, err := client.Stories(trackerProjectID, `-state:accepted label:"broken build"`)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -71,9 +75,9 @@ func main() {
 					if story.Name == fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status) {
 						commentText := fmt.Sprintf("%s/%s", host, job.FinishedBuild.URL)
 
-						log.Printf("found story %v\n", story.Id)
+						log.Printf("found story %v\n", story.ID)
 
-						comments, _, err := trackerClient.Stories.ListComments(trackerProjectID, story.Id)
+						comments, err := client.ListComments(trackerProjectID, story.ID)
 						for _, c := range comments {
 							if c.Text == commentText {
 								continue Checks
@@ -81,8 +85,7 @@ func main() {
 						}
 
 						log.Println("commenting on previously created story...")
-						comment := &pivotal.Comment{Text: commentText}
-						_, _, err = trackerClient.Stories.AddComment(trackerProjectID, story.Id, comment)
+						err = client.AddComment(trackerProjectID, story.ID, commentText)
 						if err != nil {
 							log.Println(err)
 							continue
@@ -94,38 +97,31 @@ func main() {
 				log.Println("creating a new story...")
 
 				log.Println("retrieveing top of backlog story id...")
-				tobStory, err := trackerClient.Stories.List(trackerProjectID, `-type:release state:unstarted`)
+				tobStory, err := client.Stories(trackerProjectID, `-type:release state:unstarted`)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
-				log.Printf("found story %v\n", tobStory[0].Id)
+				log.Printf("found story %v\n", tobStory[0].ID)
 
-				s := &pivotal.StoryRequest{
-					Name:  fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status),
-					Type:  pivotal.StoryTypeChore,
-					State: pivotal.StoryStateUnstarted,
-					Labels: &[]*pivotal.Label{
-						&pivotal.Label{Name: "broken build"},
+				story, err := client.CreateStory(trackerProjectID, tracker.Story{
+					Name:         fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status),
+					StoryType:    "chore",
+					CurrentState: "unstarted",
+					Labels: []tracker.Label{
+						{Name: "broken build"},
 					},
-					BeforeId: &tobStory[0].Id,
-				}
-
-				story, _, err := trackerClient.Stories.Create(trackerProjectID, s)
+					Comments: []tracker.Comment{
+						{Text: fmt.Sprintf("%s/%s", host, job.FinishedBuild.URL)},
+					},
+					BeforeID: tobStory[0].ID,
+				})
 				if err != nil {
 					log.Println(err)
 					continue
 				}
 
-				log.Printf("new story created %v\n", story.Id)
-
-				log.Println("commenting on new story...")
-				comment := &pivotal.Comment{Text: fmt.Sprintf("%s/%s", host, job.FinishedBuild.URL)}
-				_, _, err = trackerClient.Stories.AddComment(trackerProjectID, story.Id, comment)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				log.Printf("new story created %v\n", story.ID)
 			}
 		}
 
