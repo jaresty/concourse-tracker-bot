@@ -1,0 +1,21 @@
+---
+groups:
+- name: concourse-tracker-bot
+  jobs:
+  - unit-tests
+
+resources:
+- name: concourse-tracker-bot
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/zankich/concourse-tracker-bot.git
+
+jobs:
+- name: unit-tests
+  public: true
+  plan:
+  - get: concourse-tracker-bot
+    trigger: true
+  - task: unit
+    file: concourse-tracker-bot/ci/task.yml

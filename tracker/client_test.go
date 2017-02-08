@@ -197,7 +197,7 @@ var _ = Describe("Client", func() {
 				}
 
 				_, err := client.Stories(99, "")
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
 			})
 
 			It("returns an error when the json is malformed", func() {
@@ -308,7 +308,7 @@ var _ = Describe("Client", func() {
 				}
 
 				_, err := client.CreateStory(99, tracker.Story{})
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
 			})
 
 			It("returns an error when the json is malformed", func() {
@@ -414,7 +414,7 @@ var _ = Describe("Client", func() {
 				}
 
 				err := client.AddComment(99, 101, "")
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
 			})
 
 			It("returns an error when url is malformed", func() {
@@ -501,7 +501,7 @@ var _ = Describe("Client", func() {
 				}
 
 				_, err := client.ListComments(99, 101)
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake: no such host")))
+				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
 			})
 
 			It("returns an error when the json is malformed", func() {

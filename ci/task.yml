@@ -1,0 +1,13 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+
+inputs:
+- name: concourse-tracker-bot
+
+run:
+  path: concourse-tracker-bot/ci/task
