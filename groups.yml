@@ -1,3 +1,24 @@
 ---
 luna:
 - cf-deployment-.*-fresh
+snitch:
+- cf-deployment-.*-lite
+hermione:
+- cf-deployment-.*-upgrade
+trelawney:
+- cf-deployment-.*-ops
+update-release:
+- cf-deployment-.*-update-release.*
+minerva:
+- cf-deployment-.*-transition
+- cf-deployment-record-r2d2-compatible-versions
+nats:
+- nats-release.*
+a1:
+- cf-release-.*aws.*
+cat:
+- cf-release-.*vsphere.*
+cf-release-lite:
+- cf-release-.*lite.*
+build-docker-images:
+- build-docker-images-.*

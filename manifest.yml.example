@@ -2,6 +2,7 @@
 applications:
   - name: concourse-tracker-bot
     health-check-type: none
+    command: concourse-tracker-bot --group-config-file groups.yml
     env:
       GOPACKAGENAME: concourse-tracker-bot
       GO15VENDOREXPERIMENT: 1
