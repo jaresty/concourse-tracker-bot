@@ -4,13 +4,13 @@ function main() {
   local root_dir
   root_dir="${1}"
 
-  mkdir -p "${GOPATH}/src/github.com/zankich"
-  ln -s "${root_dir}/concourse-tracker-bot" "${GOPATH}/src/github.com/zankich/concourse-tracker-bot"
+  mkdir -p "${GOPATH}/src/github.com/jaresty"
+  ln -s "${root_dir}/concourse-tracker-bot" "${GOPATH}/src/github.com/jaresty/concourse-tracker-bot"
 
   go get github.com/onsi/ginkgo/...
   go get github.com/onsi/gomega/...
 
-  pushd "${GOPATH}/src/github.com/zankich/concourse-tracker-bot" > /dev/null
+  pushd "${GOPATH}/src/github.com/jaresty/concourse-tracker-bot" > /dev/null
     ginkgo -r -randomizeAllSpecs -randomizeSuites -race .
   popd > /dev/null
 }

@@ -9,7 +9,7 @@ resources:
   type: git
   source:
     branch: master
-    uri: https://github.com/zankich/concourse-tracker-bot.git
+    uri: https://github.com/jaresty/concourse-tracker-bot.git
 
 jobs:
 - name: unit-tests
