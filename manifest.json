@@ -1,10 +1,7 @@
 {
     "dependencies": {
-        "github.com/onsi/ginkgo": {
-            "branch": "master"
-        },
-        "github.com/onsi/gomega": {
-            "branch": "master"
+        "gopkg.in/yaml.v2": {
+            "revision": "49c95bdc21843256fb6c4e0d370a05f24a0bf213"
         }
     }
 }
