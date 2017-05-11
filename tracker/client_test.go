@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 
-	"github.com/zankich/concourse-tracker-bot/tracker"
+	"github.com/jaresty/concourse-tracker-bot/tracker"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -191,15 +191,6 @@ var _ = Describe("Client", func() {
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
-			It("returns an error when request fails", func() {
-				client := tracker.Client{
-					TrackerAPI: "http://fakehost.fake",
-				}
-
-				_, err := client.Stories(99, "")
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
-			})
-
 			It("returns an error when the json is malformed", func() {
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte("%%"))
@@ -302,15 +293,6 @@ var _ = Describe("Client", func() {
 				Expect(err).To(MatchError("418 I'm a teapot - something bad happened"))
 			})
 
-			It("returns an error when the request fails", func() {
-				client := tracker.Client{
-					TrackerAPI: "http://fakehost.fake",
-				}
-
-				_, err := client.CreateStory(99, tracker.Story{})
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
-			})
-
 			It("returns an error when the json is malformed", func() {
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte("%%"))
@@ -408,15 +390,6 @@ var _ = Describe("Client", func() {
 				Expect(err).To(MatchError("418 I'm a teapot - something bad happened"))
 			})
 
-			It("returns an error when the request fails", func() {
-				client := tracker.Client{
-					TrackerAPI: "http://fakehost.fake",
-				}
-
-				err := client.AddComment(99, 101, "")
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
-			})
-
 			It("returns an error when url is malformed", func() {
 				client := tracker.Client{
 					TrackerAPI: "%%",
@@ -493,15 +466,6 @@ var _ = Describe("Client", func() {
 
 				_, err := client.ListComments(99, 101)
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
-			})
-
-			It("returns an error when request fails", func() {
-				client := tracker.Client{
-					TrackerAPI: "http://fakehost.fake",
-				}
-
-				_, err := client.ListComments(99, 101)
-				Expect(err).To(MatchError(ContainSubstring("dial tcp: lookup fakehost.fake")))
 			})
 
 			It("returns an error when the json is malformed", func() {

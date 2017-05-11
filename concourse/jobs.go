@@ -18,7 +18,9 @@ type Group struct {
 	Jobs []string `json:"jobs"`
 }
 
-func GetJobURLs(host string, team string) ([]string, error) {
+type ConcourseClient struct{}
+
+func (c ConcourseClient) GetJobURLs(host string, team string) ([]string, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/api/v1/teams/%s/pipelines", host, team))
 	if err != nil {
 		return []string{}, err

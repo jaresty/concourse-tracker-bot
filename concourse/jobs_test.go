@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/zankich/concourse-tracker-bot/concourse"
+	"github.com/jaresty/concourse-tracker-bot/concourse"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,7 +70,12 @@ const (
 ]`
 )
 
+var client concourse.ConcourseClient
+
 var _ = Describe("GetJobURLs", func() {
+	BeforeEach(func() {
+		client = concourse.ConcourseClient{}
+	})
 	It("returns a list of public jobs for a given team", func() {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == "GET" && r.URL.Path == "/api/v1/teams/main/pipelines" {
@@ -82,7 +87,7 @@ var _ = Describe("GetJobURLs", func() {
 		}))
 		defer ts.Close()
 
-		urls, err := concourse.GetJobURLs(ts.URL, "main")
+		urls, err := client.GetJobURLs(ts.URL, "main")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(urls).To(Equal([]string{
@@ -97,7 +102,7 @@ var _ = Describe("GetJobURLs", func() {
 
 	Context("failure cases", func() {
 		It("returns an error when the host is bad", func() {
-			_, err := concourse.GetJobURLs("%%%%%", "main")
+			_, err := client.GetJobURLs("%%%%%", "main")
 
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 		})
@@ -113,7 +118,7 @@ var _ = Describe("GetJobURLs", func() {
 			}))
 			defer ts.Close()
 
-			_, err := concourse.GetJobURLs(ts.URL, "main")
+			_, err := client.GetJobURLs(ts.URL, "main")
 			Expect(err).To(MatchError("invalid character '%' looking for beginning of value"))
 		})
 	})
