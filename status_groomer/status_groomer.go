@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/jaresty/concourse-tracker-bot/tracker"
@@ -39,8 +40,6 @@ type Logger interface {
 func updateStory(client TrackerClient, host string, buildURL string, trackerProjectID, storyID int, log Logger) error {
 	commentText := fmt.Sprintf("%s/%s", host, buildURL)
 
-	log.Printf("found story %v\n", storyID)
-
 	comments, err := client.ListComments(trackerProjectID, storyID)
 	for _, c := range comments {
 		if c.Text == commentText {
@@ -56,7 +55,7 @@ func updateStory(client TrackerClient, host string, buildURL string, trackerProj
 	return nil
 }
 
-func createStory(log Logger, client TrackerClient, trackerProjectID int, host string, job Job) error {
+func createStory(storyName string, log Logger, client TrackerClient, trackerProjectID int, host string, job Job) error {
 	log.Println("creating a new story...")
 
 	log.Println("retrieving top of backlog story id...")
@@ -67,7 +66,7 @@ func createStory(log Logger, client TrackerClient, trackerProjectID int, host st
 	log.Printf("found story %v\n", tobStory[0].ID)
 
 	story, err := client.CreateStory(trackerProjectID, tracker.Story{
-		Name:         fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status),
+		Name:         storyName,
 		StoryType:    "chore",
 		CurrentState: "unstarted",
 		Labels: []tracker.Label{
@@ -86,16 +85,26 @@ func createStory(log Logger, client TrackerClient, trackerProjectID int, host st
 	return nil
 }
 
-func findExistingStory(job Job, stories []tracker.Story) *tracker.Story {
+func findExistingStory(storyName string, stories []tracker.Story) *tracker.Story {
 	for _, story := range stories {
-		if story.Name == fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status) {
+		if story.Name == storyName {
 			return &story
 		}
 	}
 	return nil
 }
 
-func handleFailedBuild(job Job, client TrackerClient, host string, trackerProjectID int, log Logger) error {
+func getStoryName(job Job, groupingStrategy map[string]string) string {
+	for regex, groupName := range groupingStrategy {
+		matched, err := regexp.MatchString(regex, fmt.Sprintf("%s-%s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName))
+		if err == nil && matched {
+			return fmt.Sprintf("%s has failed", groupName)
+		}
+	}
+	return fmt.Sprintf("%s/%s has %s", job.FinishedBuild.PipelineName, job.FinishedBuild.JobName, job.FinishedBuild.Status)
+}
+
+func handleFailedBuild(groupingStrategy map[string]string, job Job, client TrackerClient, host string, trackerProjectID int, log Logger) error {
 	log.Println("build status failed")
 	stories, err := client.Stories(trackerProjectID, `-state:accepted label:"broken build"`)
 	if err != nil {
@@ -103,8 +112,11 @@ func handleFailedBuild(job Job, client TrackerClient, host string, trackerProjec
 	}
 
 	log.Println("checking for a previously created story...")
-	existingStory := findExistingStory(job, stories)
+	storyName := getStoryName(job, groupingStrategy)
+
+	existingStory := findExistingStory(storyName, stories)
 	if existingStory != nil {
+		log.Printf("found story %v\n", existingStory.ID)
 		err = updateStory(client, host, job.FinishedBuild.URL, trackerProjectID, existingStory.ID, log)
 		if err != nil {
 			return err
@@ -112,14 +124,14 @@ func handleFailedBuild(job Job, client TrackerClient, host string, trackerProjec
 		return nil
 	}
 
-	err = createStory(log, client, trackerProjectID, host, job)
+	err = createStory(storyName, log, client, trackerProjectID, host, job)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func processURLs(urls []string, client TrackerClient, host string, trackerProjectID int, log Logger) error {
+func processURLs(groupingStrategy map[string]string, urls []string, client TrackerClient, host string, trackerProjectID int, log Logger) error {
 	for _, url := range urls {
 		log.Printf("checking %s...\n", url)
 
@@ -134,7 +146,7 @@ func processURLs(urls []string, client TrackerClient, host string, trackerProjec
 		}
 
 		if job.FinishedBuild.Status == "failed" {
-			err := handleFailedBuild(job, client, host, trackerProjectID, log)
+			err := handleFailedBuild(groupingStrategy, job, client, host, trackerProjectID, log)
 			if err != nil {
 				return err
 			}
@@ -143,7 +155,7 @@ func processURLs(urls []string, client TrackerClient, host string, trackerProjec
 	return nil
 }
 
-func Groom(host, team string, trackerProjectID int, client TrackerClient, concourse ConcourseClient, log Logger, maxIterations int) {
+func Groom(groupingStrategy map[string]string, host, team string, trackerProjectID int, client TrackerClient, concourse ConcourseClient, log Logger, maxIterations int) {
 	var currentIteration int
 	for {
 		log.Println("retrieving jobs...")
@@ -153,7 +165,7 @@ func Groom(host, team string, trackerProjectID int, client TrackerClient, concou
 		}
 
 		log.Println("checking for build errors...")
-		err = processURLs(urls, client, host, trackerProjectID, log)
+		err = processURLs(groupingStrategy, urls, client, host, trackerProjectID, log)
 		if err != nil {
 			log.Println(err)
 		}

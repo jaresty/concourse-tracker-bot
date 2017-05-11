@@ -1,4 +1,4 @@
-package status_groomer_test
+package parser_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestStatusGroomer(t *testing.T) {
+func TestParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Status Groomer Suite")
+	RunSpecs(t, "Parser Suite")
 }
