@@ -1,17 +1,23 @@
 ---
 luna:
 - cf-deployment-.*-fresh
+- cf-deployment-fresh-.*
 snitch:
 - cf-deployment-.*-lite
+- cf-deployment-lite-.*
 hermione:
 - cf-deployment-.*-upgrade
+- cf-deployment-upgrade-.*
 trelawney:
 - cf-deployment-.*-ops
+- cf-deployment-ops-.*
 update-release:
 - cf-deployment-.*-update-release.*
 minerva:
 - cf-deployment-.*-transition
 - cf-deployment-record-r2d2-compatible-versions
+- cf-deployment-transition-.*
+- cf-deployment-legacy-.*
 nats:
 - nats-release.*
 a1:
